@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         国際郵便マイページ - 差出人参照番号を一覧表示 + 重量入力→送り状作成
 // @namespace    http://tampermonkey.net/
-// @version      2.6
+// @version      2.7
 // @description  発送予定一覧に差出人参照番号・重量入力・送り状作成ボタンを表示する
 // @author       You
 // @updateURL    https://raw.githubusercontent.com/auc-assy-underwear/ems-label-creator/main/int_mypage_ems_creator.user.js
@@ -48,8 +48,7 @@
         const csrfToken = csrfInput.value;
 
         headerRow.insertBefore(makeHeaderTh('差出人参照番号'), headerRow.lastElementChild);
-        headerRow.insertBefore(makeHeaderTh('重量 (g)'),       headerRow.lastElementChild);
-        headerRow.insertBefore(makeHeaderTh('送り状作成'),      headerRow.lastElementChild);
+        headerRow.insertBefore(makeHeaderTh('重量(g)・送り状作成'), headerRow.lastElementChild);
 
         for (let item of dataRows) {
             const tdRef = document.createElement('td');
@@ -58,29 +57,29 @@
             tdRef.setAttribute('data-ref-tracking', item.trackingNo);
             item.row.insertBefore(tdRef, item.row.lastElementChild);
 
-            const tdWeight = document.createElement('td');
-            tdWeight.className = 'ce';
-            applyTdStyle(tdWeight, '', '#333');
+            // 重量入力とボタンを1つのセルにまとめる
+            const tdAction = document.createElement('td');
+            tdAction.className = 'ce';
+            applyTdStyle(tdAction, '', '#333');
+            tdAction.style.whiteSpace = 'nowrap';
+
             const inp = document.createElement('input');
             inp.type        = 'number';
             inp.min         = '1';
             inp.placeholder = 'g';
-            inp.style.cssText = 'width:70px;padding:2px 4px;font-size:13px;border:1px solid #ccc;border-radius:3px;text-align:right;';
+            inp.style.cssText = 'width:60px;padding:2px 4px;font-size:13px;border:1px solid #ccc;border-radius:3px;text-align:right;margin-right:4px;';
             inp.setAttribute('data-weight-for', item.trackingNo);
-            tdWeight.appendChild(inp);
-            item.row.insertBefore(tdWeight, item.row.lastElementChild);
 
-            const tdBtn = document.createElement('td');
-            tdBtn.className = 'ce';
-            applyTdStyle(tdBtn, '', '#333');
             const btn = document.createElement('input');
             btn.type  = 'button';
             btn.value = '送り状作成';
             btn.style.cssText = 'font-size:12px;padding:3px 8px;cursor:pointer;background:#f60;color:#fff;border:none;border-radius:3px;white-space:nowrap;';
             btn.setAttribute('data-create-for', item.trackingNo);
             btn.addEventListener('click', () => onCreateClick(btn, csrfToken, item.trackingNo));
-            tdBtn.appendChild(btn);
-            item.row.insertBefore(tdBtn, item.row.lastElementChild);
+
+            tdAction.appendChild(inp);
+            tdAction.appendChild(btn);
+            item.row.insertBefore(tdAction, item.row.lastElementChild);
         }
 
         for (let item of dataRows) {
