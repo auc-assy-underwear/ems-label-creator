@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         国際郵便マイページ - 差出人参照番号を一覧表示 + 重量入力→送り状作成
 // @namespace    http://tampermonkey.net/
-// @version      2.4
+// @version      2.5
 // @description  発送予定一覧に差出人参照番号・重量入力・送り状作成ボタンを表示する
 // @author       You
 // @updateURL    https://raw.githubusercontent.com/auc-assy-underwear/ems-label-creator/main/int_mypage_ems_creator.user.js
@@ -131,8 +131,14 @@
             const doc2  = parseHtml(html2);
             const fields2 = collectFormFields(doc2);
 
-            // ── 総重量をセット ──
+            // ── 総重量・発送予定日をセット ──
             fields2['shippingBean.totalWeight.value'] = weightVal;
+            // 発送予定日を本日に上書き（元の注文が過去日付だとエラーになるため）
+            const _t = new Date();
+            const _y = _t.getFullYear();
+            const _m = String(_t.getMonth() + 1).padStart(2, '0');
+            const _d = String(_t.getDate()).padStart(2, '0');
+            fields2['shippingBean.sendDate.YMD'] = `${_y}/${_m}/${_d}`;
 
             // ── Step 3: method:regist → M060900.do へ登録 ──
             // 実際の「次へ」ボタンは submitCommand('regist') を呼び、
