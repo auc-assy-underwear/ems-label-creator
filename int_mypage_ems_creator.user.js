@@ -4,8 +4,8 @@
 // @version      2.8
 // @description  発送予定一覧に差出人参照番号・重量入力・送り状作成ボタンを表示する
 // @author       You
-// @updateURL    https://raw.githubusercontent.com/auc-assy-underwear/ems-label-creator/main/int_mypage_ems_creator.user.js
-// @downloadURL  https://raw.githubusercontent.com/auc-assy-underwear/ems-label-creator/main/int_mypage_ems_creator.user.js
+// @updateURL    https://cdn.jsdelivr.net/gh/auc-assy-underwear/ems-label-creator@main/int_mypage_ems_creator.user.js
+// @downloadURL  https://cdn.jsdelivr.net/gh/auc-assy-underwear/ems-label-creator@main/int_mypage_ems_creator.user.js
 // @match        https://www.int-mypage.post.japanpost.jp/mypage/*
 // @grant        none
 // ==/UserScript==
