@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         国際郵便マイページ - 差出人参照番号を一覧表示 + 重量入力→送り状作成
 // @namespace    http://tampermonkey.net/
-// @version      2.5
+// @version      2.6
 // @description  発送予定一覧に差出人参照番号・重量入力・送り状作成ボタンを表示する
 // @author       You
 // @updateURL    https://raw.githubusercontent.com/auc-assy-underwear/ems-label-creator/main/int_mypage_ems_creator.user.js
@@ -140,16 +140,29 @@
             const _d = String(_t.getDate()).padStart(2, '0');
             fields2['shippingBean.sendDate.YMD'] = `${_y}/${_m}/${_d}`;
 
-            // ── Step 3: method:regist → M060900.do へ登録 ──
-            // 実際の「次へ」ボタンは submitCommand('regist') を呼び、
-            // 'command' inputのnameを 'method:regist' にリネームして M060900.do に送信する
+            // ── Step 3: method:regist → M060900.do（確認画面）──
+            // submitCommand('regist') の動作：'command' inputのnameを 'method:regist' にリネームして送信
             fields2['method:regist'] = '';
             delete fields2['command'];
 
             const html3 = await postFetch(REGIST_URL, fields2);
             const doc3  = parseHtml(html3);
 
-            const hasError = doc3.querySelector('.error-message, .errorMessage, #errorMsg');
+            // M060900.do は「登録内容の確認」画面。エラーチェック後に次のステップへ。
+            const errEl3 = doc3.querySelector('.error-message, .errorMessage, #errorMsg');
+            if (errEl3) {
+                throw new Error('確認画面でエラーが発生しました：\n' + errEl3.textContent.trim());
+            }
+
+            // ── Step 4: method:regist → M061000.do（最終登録確定）──
+            // 確認画面から「送り状を登録する」ボタンが submitRegist() → submitCommand('regist') を呼び
+            // M061000.do に method:regist を送信して登録を確定する
+            const fields3 = { 'method:regist': '', csrfToken };
+
+            const html4 = await postFetch(ETC_URL, fields3);
+            const doc4  = parseHtml(html4);
+
+            const hasError = doc4.querySelector('.error-message, .errorMessage, #errorMsg');
             if (hasError) {
                 throw new Error('登録時にエラーが発生しました。手動でご確認ください。');
             }
