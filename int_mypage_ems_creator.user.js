@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         国際郵便マイページ - 差出人参照番号を一覧表示 + 重量入力→送り状作成
 // @namespace    http://tampermonkey.net/
-// @version      2.9
+// @version      2.10
 // @description  発送予定一覧に差出人参照番号・重量入力・送り状作成ボタンを表示する
 // @author       You
 // @updateURL    https://cdn.jsdelivr.net/gh/auc-assy-underwear/ems-label-creator@main/int_mypage_ems_creator.user.js
@@ -69,8 +69,7 @@
             refDiv.setAttribute('data-ref-tracking', item.trackingNo);
 
             const inp = document.createElement('input');
-            inp.type        = 'number';
-            inp.min         = '1';
+            inp.type        = 'text';
             inp.placeholder = 'g';
             inp.style.cssText = 'width:70px;padding:2px 4px;font-size:13px;border:1px solid #ccc;border-radius:3px;text-align:right;';
             inp.setAttribute('data-weight-for', item.trackingNo);
