@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         国際郵便マイページ - 差出人参照番号を一覧表示 + 重量入力→送り状作成
 // @namespace    http://tampermonkey.net/
-// @version      2.8
+// @version      2.9
 // @description  発送予定一覧に差出人参照番号・重量入力・送り状作成ボタンを表示する
 // @author       You
 // @updateURL    https://cdn.jsdelivr.net/gh/auc-assy-underwear/ems-label-creator@main/int_mypage_ems_creator.user.js
@@ -47,52 +47,62 @@
         if (!csrfInput) return;
         const csrfToken = csrfInput.value;
 
-        headerRow.insertBefore(makeHeaderTh('差出人参照番号'), headerRow.lastElementChild);
-        headerRow.insertBefore(makeHeaderTh('重量(g)・送り状作成'), headerRow.lastElementChild);
+        headerRow.insertBefore(makeHeaderTh('送り状印刷'), headerRow.lastElementChild);
 
         for (let item of dataRows) {
-            const tdRef = document.createElement('td');
-            tdRef.className = 'ce';
-            applyTdStyle(tdRef, '（読込中）', '#999');
-            tdRef.setAttribute('data-ref-tracking', item.trackingNo);
-            item.row.insertBefore(tdRef, item.row.lastElementChild);
+            // 差出人参照番号・重量入力・印刷ボタンを1つのセルにまとめる
+            const td = document.createElement('td');
+            td.className = 'ce';
+            applyTdStyle(td, '', '#333');
 
-            // 重量入力とボタンを1つのセルに上下で配置
-            const tdAction = document.createElement('td');
-            tdAction.className = 'ce';
-            applyTdStyle(tdAction, '', '#333');
-            tdAction.style.cssText += ';display:table-cell;';
+            // 外側: 左（参照番号＋重量）と右（印刷ボタン）を横並び
+            const wrap = document.createElement('div');
+            wrap.style.cssText = 'display:flex;align-items:center;gap:6px;justify-content:center;';
+
+            // 左: 参照番号（上）＋ 重量入力（下）
+            const left = document.createElement('div');
+            left.style.cssText = 'display:flex;flex-direction:column;gap:4px;align-items:center;';
+
+            const refDiv = document.createElement('div');
+            refDiv.style.cssText = 'font-size:12px;color:#999;white-space:nowrap;';
+            refDiv.textContent = '（読込中）';
+            refDiv.setAttribute('data-ref-tracking', item.trackingNo);
 
             const inp = document.createElement('input');
             inp.type        = 'number';
             inp.min         = '1';
             inp.placeholder = 'g';
-            inp.style.cssText = 'width:70px;padding:2px 4px;font-size:13px;border:1px solid #ccc;border-radius:3px;text-align:right;display:block;margin:0 auto 4px;';
+            inp.style.cssText = 'width:70px;padding:2px 4px;font-size:13px;border:1px solid #ccc;border-radius:3px;text-align:right;';
             inp.setAttribute('data-weight-for', item.trackingNo);
 
+            left.appendChild(refDiv);
+            left.appendChild(inp);
+
+            // 右: 印刷ボタン
             const btn = document.createElement('input');
             btn.type  = 'button';
-            btn.value = '送り状作成';
-            btn.style.cssText = 'font-size:12px;padding:3px 8px;cursor:pointer;background:#f60;color:#fff;border:none;border-radius:3px;white-space:nowrap;display:block;margin:0 auto;';
+            btn.value = '印刷';
+            btn.style.cssText = 'font-size:12px;padding:6px 10px;cursor:pointer;background:#f60;color:#fff;border:none;border-radius:3px;white-space:nowrap;';
             btn.setAttribute('data-create-for', item.trackingNo);
             btn.addEventListener('click', () => onCreateClick(btn, csrfToken, item.trackingNo));
 
-            tdAction.appendChild(inp);
-            tdAction.appendChild(btn);
-            item.row.insertBefore(tdAction, item.row.lastElementChild);
+            wrap.appendChild(left);
+            wrap.appendChild(btn);
+            td.appendChild(wrap);
+            item.row.insertBefore(td, item.row.lastElementChild);
         }
 
         for (let item of dataRows) {
             try {
                 const refNo = await fetchReferenceNumber(csrfToken, item.trackingNo);
-                const td = document.querySelector(`td[data-ref-tracking="${item.trackingNo}"]`);
-                if (td) {
-                    td.textContent = refNo || '（未設定）';
-                    td.style.color = refNo ? '#333' : '#999';
+                const div = document.querySelector(`div[data-ref-tracking="${item.trackingNo}"]`);
+                if (div) {
+                    div.textContent = refNo || '（未設定）';
+                    div.style.color = refNo ? '#333' : '#999';
                 }
             } catch (e) {
-                const td = document.querySelector(`td[data-ref-tracking="${item.trackingNo}"]`);
-                if (td) { td.textContent = 'エラー'; td.style.color = 'red'; }
+                const div = document.querySelector(`div[data-ref-tracking="${item.trackingNo}"]`);
+                if (div) { div.textContent = 'エラー'; div.style.color = 'red'; }
             }
             await sleep(300);
         }
@@ -166,7 +176,7 @@
                 throw new Error('登録時にエラーが発生しました。手動でご確認ください。');
             }
 
-            btn.value            = '✓ 登録完了';
+            btn.value            = '✓ 完了';
             btn.style.background = '#4a4';
             if (weightInp) weightInp.disabled = true;
 
@@ -178,7 +188,7 @@
             console.error('[送り状作成]', err);
             alert('エラーが発生しました：\n' + err.message);
             btn.disabled         = false;
-            btn.value            = '送り状作成';
+            btn.value            = '印刷';
             btn.style.background = '#f60';
         }
     }
