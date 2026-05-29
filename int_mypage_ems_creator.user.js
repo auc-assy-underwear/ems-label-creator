@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         国際郵便マイページ - 差出人参照番号を一覧表示 + 重量入力→送り状作成
 // @namespace    http://tampermonkey.net/
-// @version      2.3
+// @version      2.4
 // @description  発送予定一覧に差出人参照番号・重量入力・送り状作成ボタンを表示する
 // @author       You
 // @match        https://www.int-mypage.post.japanpost.jp/mypage/*
@@ -13,7 +13,8 @@
 
     const BASE_URL    = 'https://www.int-mypage.post.japanpost.jp/mypage/';
     const DETAIL_URL  = BASE_URL + 'M061200.do';
-    const CONFIRM_URL = BASE_URL + 'M061000.do';
+    const ETC_URL     = BASE_URL + 'M061000.do';  // 発送関連情報編集画面
+    const REGIST_URL  = BASE_URL + 'M060900.do';  // 登録確認・完了画面
 
     window.addEventListener('load', function() {
         const h2 = document.querySelector('h2');
@@ -120,33 +121,27 @@
             const doc1 = parseHtml(html1);
             const fields1 = collectFormFields(doc1);
 
-            // ── Step 2: method:etcChange → 発送関連情報編集画面を取得 ──
+            // ── Step 2: method:etcChange → 発送関連情報編集画面(M061000.do)を取得 ──
             fields1['method:etcChange'] = '';
             delete fields1['command'];
 
-            const html2 = await postFetch(CONFIRM_URL, fields1);
+            const html2 = await postFetch(ETC_URL, fields1);
             const doc2  = parseHtml(html2);
             const fields2 = collectFormFields(doc2);
 
             // ── 総重量をセット ──
             fields2['shippingBean.totalWeight.value'] = weightVal;
-            fields2['method:next'] = '';
+
+            // ── Step 3: method:regist → M060900.do へ登録 ──
+            // 実際の「次へ」ボタンは submitCommand('regist') を呼び、
+            // 'command' inputのnameを 'method:regist' にリネームして M060900.do に送信する
+            fields2['method:regist'] = '';
             delete fields2['command'];
 
-            // ── Step 3: method:next → 確認画面へ ──
-            const html3 = await postFetch(CONFIRM_URL, fields2);
+            const html3 = await postFetch(REGIST_URL, fields2);
             const doc3  = parseHtml(html3);
-            const fields3 = collectFormFields(doc3);
 
-            // ── Step 4: method:regist → 登録完了 ──
-            fields3['method:regist'] = '';
-            delete fields3['command'];
-            fields3['csrfToken'] = csrfToken;
-
-            const html4 = await postFetch(CONFIRM_URL, fields3);
-            const doc4  = parseHtml(html4);
-
-            const hasError = doc4.querySelector('.error-message, .errorMessage, #errorMsg');
+            const hasError = doc3.querySelector('.error-message, .errorMessage, #errorMsg');
             if (hasError) {
                 throw new Error('登録時にエラーが発生しました。手動でご確認ください。');
             }
@@ -155,7 +150,7 @@
             btn.style.background = '#4a4';
             if (weightInp) weightInp.disabled = true;
 
-            if (confirm(`送り状を登録しました（追跡番号: ${trackingNo}）。\n印刷画面に移動しますか？`)) {
+            if (confirm(`送り状の発送関連情報を登録しました（追跡番号: ${trackingNo}）。\n印刷画面に移動しますか？`)) {
                 submitPrint(csrfToken, trackingNo);
             }
 
